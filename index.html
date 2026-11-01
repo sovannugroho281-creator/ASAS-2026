@@ -603,7 +603,7 @@
         let activeSessionLocks = JSON.parse(localStorage.getItem('SIUS_V8_ACTIVE_SESSIONS')) || {};
         let examResults = JSON.parse(localStorage.getItem('SIUS_V8_RESULTS')) || [];
         let auditLogs = JSON.parse(localStorage.getItem('SIUS_V8_AUDITLOGS')) || [];
-        let gasBackendUrl = "https://script.google.com/macros/s/AKfycbwOp8IbbQRQUfi9Oq8oioU_KCYzGh1PDwx1OvivK-R6bKXI0-Jz75n-K83tAN9AU_A7SQ/exec";
+        let gasBackendUrl = localStorage.getItem('SIUS_V8_GAS_URL') || 'https://script.google.com/macros/s/AKfycbwOp8IbbQRQUfi9Oq8oioU_KCYzGh1PDwx1OvivK-R6bKXI0-Jz75n-K83tAN9AU_A7SQ/exec';
 
         let currentStudent = null;
         let currentStudentAvatar = "https://placehold.co/100x100/2563eb/white?text=S";
@@ -621,6 +621,32 @@
         let violationCount = 0;
         let maxViolationsAllowed = 3;
         let isWarningOpen = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSecurityListeners();
+            populateMapelSelects();
+            updateScheduleStatusDisplay();
+
+            // Tarik bank soal terbaru secara live dari Google Sheets Cloud (GAS doGet)
+            fetchQuestionsFromCloudOnStart();
+        });
+
+        function fetchQuestionsFromCloudOnStart() {
+            if (!gasBackendUrl) return;
+
+            fetch(`${gasBackendUrl}?action=GET_QUESTIONS`)
+                .then(response => response.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length > 0) {
+                        questionsData = data;
+                        localStorage.setItem('SIUS_V8_QUESTIONS', JSON.stringify(data));
+                        console.log("Bank soal berhasil disinkronkan secara live dari Google Sheets Cloud!");
+                    }
+                })
+                .catch(err => {
+                    console.log("Menggunakan cache lokal localStorage untuk soal:", err);
+                });
+        }
 
         function initSecurityListeners() {
             document.addEventListener('visibilitychange', () => {
@@ -748,37 +774,14 @@
                 return;
             }
 
+            // Filter soal sesuai mapel yang dipilih siswa
             activeExamQuestions = questionsData.filter(q => q.mapel === mapel);
             if (activeExamQuestions.length === 0) {
-                Swal.fire('Soal Kosong', `Belum ada soal yang dikonfigurasi untuk mapel ${mapel}!`, 'warning');
+                Swal.fire('Soal Kosong', `Belum ada soal yang dikonfigurasi untuk mapel ${mapel}! Pastikan soal sudah diinput di admin dan tersinkron.`, 'warning');
                 return;
             }
 
             currentStudent = { nis, nama: namaInput, kelas: kelasInput, mapel, avatar: currentStudentAvatar };
-
-            function fetchQuestionsForStudent(selectedMapel) {
-            if (!gasBackendUrl) return;
-
-            fetch(`${gasBackendUrl}?action=GET_QUESTIONS`)
-                .then(response => response.json())
-                .then(data => {
-                    if (Array.isArray(data)) {
-                        // Filter soal khusus sesuai mata pelajaran yang dipilih siswa
-                        activeExamQuestions = data.filter(q => q.mapel === selectedMapel);
-                        
-                        if (activeExamQuestions.length > 0) {
-                            console.log(`Berhasil memuat ${activeExamQuestions.length} soal untuk mapel ${selectedMapel}`);
-                            loadQuestion(0);
-                            renderQuestionGrid();
-                        } else {
-                            Swal.fire('Soal Kosong', `Belum ada soal untuk mapel ${selectedMapel} di server cloud.`, 'warning');
-                        }
-                    }
-                })
-                .catch(err => {
-                    console.error("Gagal mengambil soal dari Google Sheets:", err);
-                });
-        }
 
             activeSessionLocks[lockKey] = { nis, nama: namaInput, mapel, startTime: new Date().toLocaleString('id-ID') };
             localStorage.setItem('SIUS_V8_ACTIVE_SESSIONS', JSON.stringify(activeSessionLocks));
