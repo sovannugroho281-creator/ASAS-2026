@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIUS v8.0 Enterprise - Portal Ujian Siswa</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+    <!-- SheetJS (XLSX) for Excel File Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- MathJax 3 for LaTeX Rendering -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-canvas: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --font-scale: 1rem;
+            --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01);
+        }
+
+        body.dark-mode {
+            --bg-canvas: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .navbar-brand-logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+        }
+
+        .card-custom {
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            box-shadow: var(--card-shadow);
+            background: var(--card-bg);
+            transition: all 0.2s ease;
+        }
+
+        .q-font-scaled {
+            font-size: var(--font-scale) !important;
+        }
+
+        .option-item {
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .option-item:hover {
+            border-color: #93c5fd;
+            background-color: rgba(37, 99, 235, 0.04);
+        }
+
+        .option-item.selected {
+            border-color: var(--primary-color);
+            background-color: rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+
+        .option-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: rgba(148, 163, 184, 0.2);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-right: 14px;
+            flex-shrink: 0;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .option-item.selected .option-badge {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .zoomable-img {
+            cursor: zoom-in;
+            transition: transform 0.2s ease;
+            max-height: 250px;
+            object-fit: contain;
+        }
+        .zoomable-img:hover {
+            transform: scale(1.02);
+        }
+
+        .q-nav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+
+        .q-nav-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .q-nav-btn.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+            font-weight: 800;
+        }
+
+        .q-nav-btn.answered {
+            background-color: #10b981 !important;
+            color: white !important;
+            border-color: #10b981 !important;
+        }
+
+        .q-nav-btn.ragu {
+            background-color: #f59e0b !important;
+            color: white !important;
+            border-color: #f59e0b !important;
+        }
+
+        .timer-box {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: #38bdf8;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 6px 14px;
+            letter-spacing: 1.5px;
+            font-size: 1.1rem;
+        }
+
+        .timer-warning {
+            animation: pulse-red 1s infinite alternate;
+            color: #ef4444 !important;
+        }
+
+        @keyframes pulse-red {
+            from { opacity: 1; }
+            to { opacity: 0.4; }
+        }
+
+        .badge-type {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .gas-status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .fs-7 {
+            font-size: 0.8rem !important;
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;" ondragstart="return false;" onselectstart="return false;">
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top py-2.5 shadow-sm">
+        <div class="container-fluid px-3 px-md-4">
+            <a class="navbar-brand d-flex align-items-center gap-2.5 fw-bold text-primary" href="#">
+                <div class="navbar-brand-logo">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="lh-1 fw-extrabold" style="letter-spacing: -0.02em;">SIUS Enterprise</span>
+                    <span class="text-muted fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.05em;">V8.0 ONLINE EXAMINATION SYSTEM</span>
+                </div>
+            </a>
+
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <div class="d-flex align-items-center gap-2 bg-light px-3 py-1.5 rounded-pill border small">
+                    <span id="gasStatusDot" class="gas-status-dot bg-secondary"></span>
+                    <span id="gasStatusText" class="fw-semibold text-muted fs-7">GAS Webhook: Belum Dikonfigurasi</span>
+                </div>
+
+                <div id="navUserInfo" class="d-none align-items-center gap-2 border-start ps-3 ms-2">
+                    <img id="navStudentAvatar" src="https://placehold.co/100x100/2563eb/white?text=S" class="rounded-circle border" style="width:36px; height:36px; object-fit:cover;" alt="Avatar">
+                    <div class="text-end d-none d-sm-block">
+                        <div id="navStudentName" class="fw-bold fs-7">Nama Siswa</div>
+                        <div id="navStudentNIS" class="text-muted small fs-7">NIS: -</div>
+                    </div>
+                    <button onclick="confirmLogout()" class="btn btn-light btn-sm text-danger rounded-circle ms-1" title="Keluar Ujian">
+                        <i class="fa-solid fa-power-off"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid px-3 px-md-4 my-4 flex-grow-1">
+        <div id="portalSiswa">
+            <div id="viewLogin" class="row justify-content-center py-4">
+                <div class="col-md-8 col-lg-5">
+                    <div class="card card-custom p-4 p-md-5">
+                        <div class="text-center mb-4">
+                            <div class="position-relative d-inline-block mb-3">
+                                <img id="previewLoginAvatar" src="https://placehold.co/120x120/2563eb/white?text=Foto" class="rounded-circle border border-3 border-primary shadow-sm" style="width:90px; height:90px; object-fit:cover;" alt="Foto Profil">
+                                <label for="uploadAvatarInput" class="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-1.5 shadow" style="cursor:pointer;" title="Unggah Foto Profil">
+                                    <i class="fa-solid fa-camera fa-xs"></i>
+                                    <input type="file" id="uploadAvatarInput" accept="image/*" class="d-none" onchange="handleAvatarUpload(event)">
+                                </label>
+                            </div>
+                            <h4 class="fw-bold mb-1" style="letter-spacing: -0.01em;">Masuk Ruang Ujian Online</h4>
+                            <p class="text-muted small">Protected with Single-Active Session & Anti-Cheating Engine</p>
+                        </div>
+
+                        <form id="formLogin" onsubmit="handleLogin(event)">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small">Nomor Induk Siswa (NIS / NISN)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-id-card text-muted"></i></span>
+                                    <input type="text" id="inputNIS" class="form-control border-start-0" placeholder="Contoh: 20261001" required autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small">Password / PIN Akses Siswa</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-lock text-muted"></i></span>
+                                    <input type="password" id="inputPasswordSiswa" class="form-control border-start-0" placeholder="Masukkan Password/PIN" required autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small">Nama Lengkap Siswa</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-user text-muted"></i></span>
+                                    <input type="text" id="inputNama" class="form-control border-start-0" placeholder="Masukkan nama lengkap" required autocomplete="off">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold small">Kelas / Rombel</label>
+                                    <input type="text" id="selectKelas" class="form-control" placeholder="Contoh: XII RPL 1" required autocomplete="off">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold small">Mata Pelajaran Ujian</label>
+                                    <select id="selectMapel" class="form-select" onchange="updateScheduleStatusDisplay()" required>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div id="scheduleStatusBox" class="alert alert-info py-2 px-3 small mb-3 rounded-3 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-clock"></i>
+                                <span id="scheduleStatusText">Memeriksa jadwal ujian...</span>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold small">Token Aktivasi Ujian</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-key text-muted"></i></span>
+                                    <input type="text" id="inputToken" class="form-control border-start-0 text-uppercase fw-bold text-primary" placeholder="Masukkan Token Ujian" required autocomplete="off">
+                                </div>
+                            </div>
+
+                            <button type="submit" id="btnStartExam" class="btn btn-primary w-100 py-2.5 rounded-3 fw-bold shadow-sm">
+                                <i class="fa-solid fa-right-to-bracket me-2"></i> Mulai Kerjakan Ujian
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div id="viewExam" class="d-none">
+                <div class="card card-custom p-3 mb-4">
+                    <div class="row align-items-center gy-3">
+                        <div class="col-md-5">
+                            <div class="d-flex align-items-center gap-3">
+                                <img id="bannerAvatar" src="" class="rounded-circle border" style="width:48px; height:48px; object-fit:cover;" alt="Avatar">
+                                <div>
+                                    <h6 class="mb-0 fw-bold" id="bannerMapel">Mata Pelajaran</h6>
+                                    <span class="text-muted small"><span id="bannerNama">Siswa</span> | NIS: <span id="bannerNIS">123</span> | <span id="bannerKelas">X</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 text-center">
+                            <div class="d-inline-flex align-items-center gap-2 bg-light p-1.5 rounded-pill border text-dark">
+                                <button class="btn btn-sm btn-white rounded-circle shadow-none" onclick="changeFontSize(-0.1)" title="Kecilkan Teks"><i class="fa-solid fa-minus fs-7"></i></button>
+                                <span class="fw-bold px-1 small"><i class="fa-solid fa-font me-1"></i> Ukuran</span>
+                                <button class="btn btn-sm btn-white rounded-circle shadow-none" onclick="changeFontSize(0.1)" title="Besarkan Teks"><i class="fa-solid fa-plus fs-7"></i></button>
+                                <div class="vr mx-1"></div>
+                                <button class="btn btn-sm btn-white rounded-circle text-warning shadow-none" id="btnThemeToggle" onclick="toggleExamTheme()" title="Ganti Mode Gelap/Terang">
+                                    <i class="fa-solid fa-moon"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 text-md-end d-flex justify-content-md-end justify-content-between align-items-center gap-3">
+                            <div class="text-start text-md-end me-md-2">
+                                <div class="text-muted small">Status Keamanan</div>
+                                <span id="violationBadge" class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1.5 rounded-pill font-monospace">
+                                    0/3 Violations
+                                </span>
+                            </div>
+
+                            <div class="text-start text-md-end">
+                                <div class="text-muted small">Sisa Waktu Ujian</div>
+                                <div class="timer-box d-inline-block" id="timerBox">00:00:00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row gy-4">
+                    <div class="col-lg-8">
+                        <div class="card card-custom p-4 min-vh-50 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold">
+                                            Soal No. <span id="qCurrentNum">1</span> / <span id="qTotalNum">0</span>
+                                        </span>
+                                        <span id="qTypeBadge" class="badge bg-secondary badge-type">Pilihan Ganda</span>
+                                        <span id="qWeightBadge" class="badge bg-info bg-opacity-10 text-info border border-info-subtle rounded-pill">Bobot: 1</span>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="checkRagu" onchange="toggleRagu()">
+                                        <label class="form-check-label small fw-semibold text-warning" for="checkRagu">
+                                            <i class="fa-solid fa-flag me-1"></i> Ragu-Ragu
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="question-body mb-4 q-font-scaled" id="qTextContainer">
+                                    <div class="fs-5 fw-medium mb-3" id="qText">Memuat soal...</div>
+                                    <div id="qMediaContainer" class="mb-3 d-none">
+                                        <img id="qImage" src="" class="img-fluid rounded-3 border zoomable-img shadow-sm" onclick="openLightbox(this.src)" alt="Media Soal">
+                                    </div>
+                                </div>
+
+                                <div id="optionsContainer" class="q-font-scaled"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center border-top pt-4 mt-4">
+                                <button class="btn btn-outline-secondary px-4 rounded-3" id="btnPrev" onclick="navigateQuestion(-1)">
+                                    <i class="fa-solid fa-arrow-left me-2"></i> Sebelumnya
+                                </button>
+                                <button class="btn btn-primary px-4 rounded-3" id="btnNext" onclick="navigateQuestion(1)">
+                                    Selanjutnya <i class="fa-solid fa-arrow-right ms-2"></i>
+                                </button>
+                                <button class="btn btn-success px-4 rounded-3 d-none" id="btnFinish" onclick="confirmSubmitExam()">
+                                    <i class="fa-solid fa-paper-plane me-2"></i> Kumpulkan Jawaban
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card card-custom p-4">
+                            <h6 class="fw-bold mb-3 d-flex align-items-center justify-content-between">
+                                <span><i class="fa-solid fa-grip me-2 text-primary"></i>Navigasi Soal</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark font-monospace border" id="answeredProgress">0/0</span>
+                                    <button class="btn btn-xs btn-outline-secondary rounded-pill" onclick="toggleNavGridVisibility()" id="btnToggleGrid">
+                                        <i class="fa-solid fa-eye-slash me-1"></i> Hide
+                                    </button>
+                                </div>
+                            </h6>
+
+                            <div id="navGridCollapsibleSection">
+                                <div class="btn-group w-100 mb-3" role="group">
+                                    <button class="btn btn-sm btn-outline-secondary active" onclick="filterNavGrid('ALL', this)">Semua</button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="filterNavGrid('ANSWERED', this)">Terjawab</button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="filterNavGrid('RAGU', this)">Ragu</button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="filterNavGrid('UNANSWERED', this)">Belum</button>
+                                </div>
+
+                                <hr class="mt-0">
+
+                                <div class="d-flex flex-wrap gap-2 mb-4 justify-content-start" id="qGridContainer"></div>
+
+                                <div class="p-3 rounded-3 small border bg-light text-dark">
+                                    <div class="fw-bold mb-2">Keterangan Status Navigasi:</div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="q-nav-btn answered" style="width:20px; height:20px; font-size:10px;">✓</span>
+                                        <span>Sudah Dikerjakan</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="q-nav-btn ragu" style="width:20px; height:20px; font-size:10px;">!</span>
+                                        <span>Ragu-Ragu</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="q-nav-btn" style="width:20px; height:20px; font-size:10px;">1</span>
+                                        <span>Belum Dikerjakan</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="confirmSubmitExam()" class="btn btn-outline-success w-100 mt-4 rounded-3 fw-bold py-2">
+                                <i class="fa-solid fa-circle-check me-2"></i> Selesaikan Ujian
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="viewResult" class="d-none row justify-content-center py-4">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card card-custom p-4 p-md-5 text-center">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle mb-3 mx-auto" style="width: 80px; height: 80px;">
+                            <i class="fa-solid fa-circle-check fa-3x"></i>
+                        </div>
+                        <h3 class="fw-bold mb-1">Ujian Berhasil Dikumpulkan!</h3>
+                        <p class="text-muted small mb-4">Jawaban Anda telah tersimpan aman dan tersinkronisasi ke server pusat panitia ujian.</p>
+
+                        <div class="bg-light p-4 rounded-3 text-start mb-4 border text-dark">
+                            <div class="row gy-2 fs-7">
+                                <div class="col-6 text-muted">Nama Siswa:</div>
+                                <div class="col-6 fw-bold text-end" id="resNama">-</div>
+                                <div class="col-6 text-muted">NIS / NISN:</div>
+                                <div class="col-6 fw-bold text-end" id="resNIS">-</div>
+                                <div class="col-6 text-muted">Kelas / Rombel:</div>
+                                <div class="col-6 fw-bold text-end" id="resKelas">-</div>
+                                <div class="col-6 text-muted">Mata Pelajaran:</div>
+                                <div class="col-6 fw-bold text-end text-primary" id="resMapel">-</div>
+                                <div class="col-6 text-muted border-top pt-2">Waktu Pengumpulkan:</div>
+                                <div class="col-6 fw-bold text-end border-top pt-2 font-monospace" id="resWaktuSubmit">-</div>
+                                <div class="col-6 text-muted">Status Penyelesaian:</div>
+                                <div class="col-6 fw-bold text-end text-success" id="resStatus">-</div>
+                            </div>
+                        </div>
+
+                        <button onclick="resetApp()" class="btn btn-primary w-100 py-2.5 rounded-3 fw-bold">
+                            <i class="fa-solid fa-arrow-rotate-left me-2"></i> Selesai & Kembali ke Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal fade" id="lightboxModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-transparent border-0 text-end">
+                <button type="button" class="btn-close btn-close-white mb-2 ms-auto" data-bs-dismiss="modal"></button>
+                <img id="lightboxImage" src="" class="img-fluid rounded-3 shadow-lg mx-auto" style="max-height:85vh; object-fit:contain;" alt="Zoomed Media">
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-3 text-center text-muted fs-7 bg-white border-top mt-auto">
+        <div class="container-fluid">
+            <span>&copy; 2026 Sistem Informasi Ujian Sekolah (SIUS v8.0 Enterprise) &bull; Student Protected Portal</span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        /* --- ANTI INSPECT ELEMENT & DEVTOOLS DETECTOR FOR USER PORTAL --- */
+        (function blockInspectElement() {
+            // 1. Blokir Klik Kanan
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                showToastWarning('Klik kanan dinonaktifkan demi keamanan ujian!');
+                return false;
+            });
+
+            // 2. Blokir Tombol Keyboard DevTools (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, dll)
+            document.addEventListener('keydown', function(e) {
+                const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+                const k = e.key.toLowerCase();
+                const keyCode = e.keyCode || e.which;
+
+                if (
+                    keyCode === 123 || // F12
+                    (isCtrlOrCmd && e.shiftKey && (k === 'i' || k === 'j' || k === 'c' || k === 'k' || k === 'e')) ||
+                    (isCtrlOrCmd && (k === 'u' || k === 's' || k === 'a' || k === 'c' || k === 'v' || k === 'p'))
+                ) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (isExamActive) {
+                        logStudentActivity('SECURITY_VIOLATION', `Percobaan membuka DevTools/Inspect via shortcut (${e.key})`);
+                        handleViolation();
+                    } else {
+                        showToastWarning('Shortcut pengembang / inspect dinonaktifkan!');
+                    }
+                    return false;
+                }
+            }, true);
+
+            // 3. DevTools Detection via Debugger Loop & Window Dimensions
+            setInterval(function() {
+                const widthThreshold = window.outerWidth - window.innerWidth > 160;
+                const heightThreshold = window.outerHeight - window.innerHeight > 160;
+                
+                if (widthThreshold || heightThreshold) {
+                    if (isExamActive) {
+                        logStudentActivity('SECURITY_VIOLATION', 'Terdeteksi membuka Inspect Element / Developer Tools!');
+                        handleViolation();
+                    }
+                }
+            }, 1500);
+
+            // Clear Console Continuously
+            setInterval(function() {
+                console.clear();
+            }, 1000);
+        })();
+
+        let MASTER_MAPEL = JSON.parse(localStorage.getItem('SIUS_V8_MASTER_MAPEL')) || [
+            "Pemrograman Web",
+            "Basis Data",
+            "Matematika",
+            "Bahasa Indonesia",
+            "Bahasa Inggris"
+        ];
+
+        const INITIAL_STUDENTS = [
+            { id: 1001, nis: "20261001", nama: "Ahmad Rizky", kelas: "XII RPL 1", password: "4829" },
+            { id: 1002, nis: "20261002", nama: "Siti Nurhaliza", kelas: "XII RPL 1", password: "7193" },
+            { id: 1003, nis: "20261003", nama: "Budi Santoso", kelas: "XII TKJ 1", password: "2568" }
+        ];
+
+        let studentsData = JSON.parse(localStorage.getItem('SIUS_V8_STUDENTS')) || INITIAL_STUDENTS;
+
+        const defaultStart = new Date(Date.now() - 3600000).toISOString().slice(0, 16);
+        const defaultEnd = new Date(Date.now() + 86400000).toISOString().slice(0, 16);
+
+        const INITIAL_SCHEDULES = {
+            "Pemrograman Web": { token: "WEB2026", durationMins: 60, start: defaultStart, end: defaultEnd },
+            "Basis Data": { token: "BD2026", durationMins: 60, start: defaultStart, end: defaultEnd },
+            "Matematika": { token: "MTK2026", durationMins: 90, start: defaultStart, end: defaultEnd },
+            "Bahasa Indonesia": { token: "BIN2026", durationMins: 90, start: defaultStart, end: defaultEnd },
+            "Bahasa Inggris": { token: "BIG2026", durationMins: 60, start: defaultStart, end: defaultEnd }
+        };
+
+        let questionsData = JSON.parse(localStorage.getItem('SIUS_V8_QUESTIONS')) || [];
+        let scheduleSettings = JSON.parse(localStorage.getItem('SIUS_V8_SCHEDULES')) || INITIAL_SCHEDULES;
+        let activeSessionLocks = JSON.parse(localStorage.getItem('SIUS_V8_ACTIVE_SESSIONS')) || {};
+        let examResults = JSON.parse(localStorage.getItem('SIUS_V8_RESULTS')) || [];
+        let auditLogs = JSON.parse(localStorage.getItem('SIUS_V8_AUDITLOGS')) || [];
+        let gasBackendUrl = "https://script.google.com/macros/s/AKfycbwOp8IbbQRQUfi9Oq8oioU_KCYzGh1PDwx1OvivK-R6bKXI0-Jz75n-K83tAN9AU_A7SQ/exec";
+
+        let currentStudent = null;
+        let currentStudentAvatar = "https://placehold.co/100x100/2563eb/white?text=S";
+        let activeExamQuestions = [];
+        let userAnswers = {};
+        let raguAnswers = {};
+        let currentQuestionIdx = 0;
+        let timerInterval = null;
+        let timeRemaining = 0;
+        let fontScale = 1.0;
+        let isDarkMode = false;
+        let navFilterState = 'ALL';
+
+        let isExamActive = false;
+        let violationCount = 0;
+        let maxViolationsAllowed = 3;
+        let isWarningOpen = false;
+
+        function initSecurityListeners() {
+            document.addEventListener('visibilitychange', () => {
+                if (isExamActive && document.hidden) {
+                    logStudentActivity('TAB_SWITCH', 'Meninggalkan tab ujian / beralih aplikasi');
+                    handleViolation();
+                }
+            });
+
+            window.addEventListener('blur', () => {
+                if (isExamActive && !isWarningOpen) {
+                    logStudentActivity('WINDOW_BLUR', 'Jendela ujian kehilangan fokus');
+                    handleViolation();
+                }
+            });
+        }
+
+        function showToastWarning(msg) {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: msg, showConfirmButton: false, timer: 2000 });
+        }
+
+        function handleViolation() {
+            if (!isExamActive || isWarningOpen) return;
+            violationCount++;
+            updateViolationBadge();
+            isWarningOpen = true;
+
+            if (violationCount > maxViolationsAllowed) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'TOLERANSI PELANGGARAN HABIS!',
+                    text: 'Anda telah melebihi batas toleransi berpindah tab/layar. Ujian dihentikan paksa!',
+                    allowOutsideClick: false,
+                    confirmButtonText: 'Kumpulkan Sekarang',
+                    confirmButtonColor: '#ef4444'
+                }).then(() => {
+                    isWarningOpen = false;
+                    submitExam(true);
+                });
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: `PERINGATAN KECURANGAN (${violationCount}/${maxViolationsAllowed})`,
+                    text: 'Terdeteksi berpindah tab atau aplikasi! Tetaplah berada di lembar ujian.',
+                    allowOutsideClick: false,
+                    confirmButtonText: 'Kembali Ujian'
+                }).then(() => {
+                    isWarningOpen = false;
+                });
+            }
+        }
+
+        function updateViolationBadge() {
+            const badge = document.getElementById('violationBadge');
+            if (!badge) return;
+            badge.innerText = `${violationCount} / ${maxViolationsAllowed} Violations`;
+            badge.className = violationCount === 0 
+                ? 'badge bg-success bg-opacity-10 text-success border border-success px-3 py-1.5 rounded-pill font-monospace' 
+                : 'badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-1.5 rounded-pill font-monospace';
+        }
+
+        function populateMapelSelects() {
+            const studentSelect = document.getElementById('selectMapel');
+            if (studentSelect) studentSelect.innerHTML = MASTER_MAPEL.map(m => `<option value="${m}">${m}</option>`).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSecurityListeners();
+            populateMapelSelects();
+            updateScheduleStatusDisplay();
+
+            if (gasBackendUrl) {
+                testGASConnection(false);
+            }
+        });
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const nis = document.getElementById('inputNIS').value.trim();
+            const passwordInput = document.getElementById('inputPasswordSiswa')?.value.trim();
+            const namaInput = document.getElementById('inputNama').value.trim();
+            const kelasInput = document.getElementById('selectKelas').value.trim();
+            const mapel = document.getElementById('selectMapel').value;
+            const tokenInput = document.getElementById('inputToken').value.trim().toUpperCase();
+
+            if (studentsData.length > 0) {
+                const foundSiswa = studentsData.find(s => s.nis === nis);
+                if (!foundSiswa) {
+                    Swal.fire('NIS Tidak Terdaftar', `Nomor Induk Siswa (NIS) ${nis} belum terdaftar di sistem!`, 'error');
+                    return;
+                }
+                
+                if (foundSiswa.password && foundSiswa.password !== passwordInput) {
+                    Swal.fire('Password / PIN Salah', `Password/PIN untuk NIS ${nis} tidak cocok! Silakan cek kartu ujian Anda.`, 'error');
+                    return;
+                }
+            }
+
+            const sched = scheduleSettings[mapel];
+            if (tokenInput !== sched.token) {
+                Swal.fire('Token Salah', `Token ujian untuk mapel ${mapel} tidak valid!`, 'error');
+                return;
+            }
+
+            const lockKey = `${nis}_${mapel}`;
+            
+            const alreadyFinished = examResults.some(r => r.nis === nis && r.mapel === mapel);
+            if (alreadyFinished) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Ujian Telah Diselesaikan',
+                    text: `NIS ${nis} sudah menyelesaikan ujian mata pelajaran ${mapel}. Sesi tidak dapat diakses kembali tanpa reset khusus dari Admin.`
+                });
+                return;
+            }
+
+            if (activeSessionLocks[lockKey]) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'AKSES DITOLAK: Sesi Sedang Aktif / Terkunci',
+                    html: `NIS <b>${nis}</b> sudah tercatat aktif login atau mengalami kendala. <br><br>Sesuai aturan ujian, <b>peserta hanya dapat 1 kali login</b>. Akses wajib di-reset oleh Admin Utama.`,
+                    confirmButtonText: 'Mengerti',
+                    confirmButtonColor: '#d33'
+                });
+                return;
+            }
+
+            activeExamQuestions = questionsData.filter(q => q.mapel === mapel);
+            if (activeExamQuestions.length === 0) {
+                Swal.fire('Soal Kosong', `Belum ada soal yang dikonfigurasi untuk mapel ${mapel}!`, 'warning');
+                return;
+            }
+
+            currentStudent = { nis, nama: namaInput, kelas: kelasInput, mapel, avatar: currentStudentAvatar };
+
+            function fetchQuestionsForStudent(selectedMapel) {
+            if (!gasBackendUrl) return;
+
+            fetch(`${gasBackendUrl}?action=GET_QUESTIONS`)
+                .then(response => response.json())
+                .then(data => {
+                    if (Array.isArray(data)) {
+                        // Filter soal khusus sesuai mata pelajaran yang dipilih siswa
+                        activeExamQuestions = data.filter(q => q.mapel === selectedMapel);
+                        
+                        if (activeExamQuestions.length > 0) {
+                            console.log(`Berhasil memuat ${activeExamQuestions.length} soal untuk mapel ${selectedMapel}`);
+                            loadQuestion(0);
+                            renderQuestionGrid();
+                        } else {
+                            Swal.fire('Soal Kosong', `Belum ada soal untuk mapel ${selectedMapel} di server cloud.`, 'warning');
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error("Gagal mengambil soal dari Google Sheets:", err);
+                });
+        }
+
+            activeSessionLocks[lockKey] = { nis, nama: namaInput, mapel, startTime: new Date().toLocaleString('id-ID') };
+            localStorage.setItem('SIUS_V8_ACTIVE_SESSIONS', JSON.stringify(activeSessionLocks));
+
+            document.getElementById('navStudentName').innerText = namaInput;
+            document.getElementById('navStudentNIS').innerText = `NIS: ${nis}`;
+            document.getElementById('navStudentAvatar').src = currentStudentAvatar;
+            document.getElementById('navUserInfo').classList.replace('d-none', 'd-flex');
+
+            document.getElementById('bannerNama').innerText = namaInput;
+            document.getElementById('bannerNIS').innerText = nis;
+            document.getElementById('bannerKelas').innerText = kelasInput;
+            document.getElementById('bannerMapel').innerText = mapel;
+            document.getElementById('bannerAvatar').src = currentStudentAvatar;
+
+            document.getElementById('viewLogin').classList.add('d-none');
+            document.getElementById('viewExam').classList.remove('d-none');
+
+            userAnswers = {};
+            raguAnswers = {};
+            currentQuestionIdx = 0;
+            timeRemaining = sched.durationMins * 60;
+            violationCount = 0;
+            isExamActive = true;
+
+            logStudentActivity('LOGIN_EXAM', `Siswa login 1x eksklusif untuk mapel ${mapel}`);
+            updateViolationBadge();
+            renderQuestionGrid();
+            loadQuestion(0);
+            startTimer();
+        }
+
+        function resetApp() {
+            clearInterval(timerInterval);
+            if (currentStudent) {
+                const lockKey = `${currentStudent.nis}_${currentStudent.mapel}`;
+                activeSessionLocks[lockKey] = { 
+                    nis: currentStudent.nis, 
+                    nama: currentStudent.nama, 
+                    mapel: currentStudent.mapel, 
+                    startTime: 'Keluar Ujian / Logged Out (' + new Date().toLocaleTimeString('id-ID') + ')' 
+                };
+                localStorage.setItem('SIUS_V8_ACTIVE_SESSIONS', JSON.stringify(activeSessionLocks));
+            }
+            isExamActive = false;
+            document.getElementById('navUserInfo').classList.replace('d-flex', 'd-none');
+            document.getElementById('viewResult').classList.add('d-none');
+            document.getElementById('viewExam').classList.add('d-none');
+            document.getElementById('viewLogin').classList.remove('d-none');
+            updateScheduleStatusDisplay();
+        }
+
+        function confirmLogout() {
+            Swal.fire({
+                title: 'Keluar Sesi Ujian?',
+                text: 'Jika Anda keluar, sesi ujian akan ditutup dan Anda TIDAK DAPAT login kembali tanpa reset khusus dari Admin Utama!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Ya, Keluar & Kunci Sesi'
+            }).then(res => {
+                if (res.isConfirmed) {
+                    if (currentStudent) {
+                        logStudentActivity('MANUAL_LOGOUT', 'Siswa menekan tombol keluar ujian');
+                    }
+                    resetApp();
+                }
+            });
+        }
+
+        function updateScheduleStatusDisplay() {
+            const selectMapel = document.getElementById('selectMapel');
+            if (!selectMapel) return;
+            const selectedMapel = selectMapel.value;
+            const sched = scheduleSettings[selectedMapel];
+            const statusBox = document.getElementById('scheduleStatusBox');
+            const statusText = document.getElementById('scheduleStatusText');
+            const btnSubmit = document.getElementById('btnStartExam');
+
+            if (!sched || !statusBox || !statusText || !btnSubmit) return;
+
+            const now = new Date().getTime();
+            const start = new Date(sched.start).getTime();
+            const end = new Date(sched.end).getTime();
+
+            if (now < start) {
+                const startTimeStr = new Date(sched.start).toLocaleString('id-ID');
+                statusBox.className = "alert alert-warning py-2 px-3 small mb-3 rounded-3 d-flex align-items-center gap-2";
+                statusText.innerText = `Jadwal Belum Dimulai. Dibuka pada: ${startTimeStr}`;
+                btnSubmit.disabled = true;
+            } else if (now > end) {
+                statusBox.className = "alert alert-danger py-2 px-3 small mb-3 rounded-3 d-flex align-items-center gap-2";
+                statusText.innerText = `Jadwal Ujian Telah Berakhir/Tutup.`;
+                btnSubmit.disabled = true;
+            } else {
+                const endTimeStr = new Date(sched.end).toLocaleString('id-ID');
+                statusBox.className = "alert alert-success py-2 px-3 small mb-3 rounded-3 d-flex align-items-center gap-2";
+                statusText.innerText = `Jadwal Aktif Terbuka hingga: ${endTimeStr}`;
+                btnSubmit.disabled = false;
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            const timerDisplay = document.getElementById('timerBox');
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    Swal.fire('Waktu Habis!', 'Waktu pengerjaan ujian telah selesai. Jawaban dikumpulkan otomatis.', 'warning')
+                        .then(() => submitExam(false));
+                    return;
+                }
+
+                if (timeRemaining < 300) timerDisplay.classList.add('timer-warning');
+
+                const h = Math.floor(timeRemaining / 3600);
+                const m = Math.floor((timeRemaining % 3600) / 60);
+                const s = timeRemaining % 60;
+                if (timerDisplay) timerDisplay.innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            }, 1000);
+        }
+
+        function loadQuestion(idx) {
+            if (idx < 0 || idx >= activeExamQuestions.length) return;
+            currentQuestionIdx = idx;
+            const q = activeExamQuestions[idx];
+
+            document.getElementById('qCurrentNum').innerText = idx + 1;
+            document.getElementById('qTotalNum').innerText = activeExamQuestions.length;
+            document.getElementById('qTypeBadge').innerText = getQuestionTypeName(q.type);
+            document.getElementById('qWeightBadge').innerText = `Bobot: ${q.weight || 1}`;
+            document.getElementById('qText').innerHTML = q.soal;
+
+            const mediaBox = document.getElementById('qMediaContainer');
+            const mediaImg = document.getElementById('qImage');
+            if (q.image) {
+                mediaImg.src = q.image;
+                mediaBox.classList.remove('d-none');
+            } else {
+                mediaBox.classList.add('d-none');
+            }
+
+            document.getElementById('checkRagu').checked = !!raguAnswers[q.id];
+
+            renderQuestionOptions(q);
+            updateNavGridButtons();
+
+            document.getElementById('btnPrev').disabled = idx === 0;
+            if (idx === activeExamQuestions.length - 1) {
+                document.getElementById('btnNext').classList.add('d-none');
+                document.getElementById('btnFinish').classList.remove('d-none');
+            } else {
+                document.getElementById('btnNext').classList.remove('d-none');
+                document.getElementById('btnFinish').classList.add('d-none');
+            }
+
+            if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+                MathJax.typesetPromise([document.getElementById('qTextContainer'), document.getElementById('optionsContainer')]);
+            }
+        }
+
+        function getQuestionTypeName(type) {
+            switch(type) {
+                case 'PG': return 'Pilihan Ganda';
+                case 'PG_KOMPLEKS': return 'PG Kompleks';
+                case 'BENAR_SALAH': return 'Benar / Salah';
+                case 'MENJODOHKAN': return 'Menjodohkan';
+                case 'ESSAY': return 'Essay / Uraian';
+                default: return type;
+            }
+        }
+
+        function renderQuestionOptions(q) {
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            const currentAns = userAnswers[q.id];
+
+            if (q.type === 'PG') {
+                ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+                    if (!q.options || !q.options[opt]) return;
+                    const isSelected = currentAns === opt;
+                    container.innerHTML += `
+                        <div class="option-item ${isSelected ? 'selected':''}" onclick="selectSingleOption('${opt}')">
+                            <div class="option-badge">${opt}</div>
+                            <div class="flex-grow-1">${q.options[opt]}</div>
+                        </div>
+                    `;
+                });
+            } else if (q.type === 'PG_KOMPLEKS') {
+                const selectedList = Array.isArray(currentAns) ? currentAns : [];
+                ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+                    if (!q.options || !q.options[opt]) return;
+                    const isChecked = selectedList.includes(opt);
+                    container.innerHTML += `
+                        <div class="option-item ${isChecked ? 'selected':''}" onclick="toggleMultiOption('${opt}')">
+                            <div class="option-badge">${isChecked ? '✓' : opt}</div>
+                            <div class="flex-grow-1">${q.options[opt]}</div>
+                        </div>
+                    `;
+                });
+            } else if (q.type === 'BENAR_SALAH') {
+                const ansObj = currentAns || {};
+                container.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle bg-white">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Pernyataan</th>
+                                    <th style="width: 80px;" class="text-center">Benar</th>
+                                    <th style="width: 80px;" class="text-center">Salah</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(q.statements || []).map(st => `
+                                    <tr>
+                                        <td>${st.text}</td>
+                                        <td class="text-center">
+                                            <input type="radio" name="bs_${st.id}" class="form-check-input" ${ansObj[st.id] === 'B' ? 'checked':''} onchange="selectStatementAns('${st.id}', 'B')">
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="radio" name="bs_${st.id}" class="form-check-input" ${ansObj[st.id] === 'S' ? 'checked':''} onchange="selectStatementAns('${st.id}', 'S')">
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (q.type === 'MENJODOHKAN') {
+                const ansObj = currentAns || {};
+                container.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle bg-white">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Premis Soal</th>
+                                    <th>Pilihan Jawaban Pasangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(q.pairs || []).map(pair => `
+                                    <tr>
+                                        <td><b>${pair.premis}</b></td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm" value="${ansObj[pair.id] || ''}" placeholder="Ketikkan pasangan..." onchange="updateMatchingAns('${pair.id}', this.value)">
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (q.type === 'ESSAY') {
+                container.innerHTML = `
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tuliskan Jawaban Uraian Anda:</label>
+                        <textarea class="form-control" rows="5" placeholder="Ketik jawaban lengkap di sini..." oninput="updateEssayAns(this.value)">${currentAns || ''}</textarea>
+                    </div>
+                `;
+            }
+        }
+
+        function selectSingleOption(opt) {
+            const q = activeExamQuestions[currentQuestionIdx];
+            userAnswers[q.id] = opt;
+            loadQuestion(currentQuestionIdx);
+        }
+
+        function toggleMultiOption(opt) {
+            const q = activeExamQuestions[currentQuestionIdx];
+            let list = Array.isArray(userAnswers[q.id]) ? [...userAnswers[q.id]] : [];
+            if (list.includes(opt)) list = list.filter(item => item !== opt);
+            else list.push(opt);
+            userAnswers[q.id] = list;
+            loadQuestion(currentQuestionIdx);
+        }
+
+        function selectStatementAns(stId, val) {
+            const q = activeExamQuestions[currentQuestionIdx];
+            userAnswers[q.id] = userAnswers[q.id] || {};
+            userAnswers[q.id][stId] = val;
+            updateNavGridButtons();
+        }
+
+        function updateMatchingAns(pairId, val) {
+            const q = activeExamQuestions[currentQuestionIdx];
+            userAnswers[q.id] = userAnswers[q.id] || {};
+            userAnswers[q.id][pairId] = val;
+            updateNavGridButtons();
+        }
+
+        function updateEssayAns(val) {
+            const q = activeExamQuestions[currentQuestionIdx];
+            userAnswers[q.id] = val;
+            updateNavGridButtons();
+        }
+
+        function toggleRagu() {
+            const q = activeExamQuestions[currentQuestionIdx];
+            raguAnswers[q.id] = document.getElementById('checkRagu').checked;
+            updateNavGridButtons();
+        }
+
+        function navigateQuestion(step) {
+            loadQuestion(currentQuestionIdx + step);
+        }
+
+        function renderQuestionGrid() {
+            const container = document.getElementById('qGridContainer');
+            container.innerHTML = '';
+            activeExamQuestions.forEach((q, idx) => {
+                container.innerHTML += `<button id="navBtn_${idx}" class="q-nav-btn" onclick="loadQuestion(${idx})">${idx + 1}</button>`;
+            });
+            updateNavGridButtons();
+        }
+
+        function updateNavGridButtons() {
+            let answeredCount = 0;
+
+            activeExamQuestions.forEach((q, idx) => {
+                const btn = document.getElementById(`navBtn_${idx}`);
+                if (!btn) return;
+
+                const ans = userAnswers[q.id];
+                const isRagu = raguAnswers[q.id];
+                const isCurrent = idx === currentQuestionIdx;
+
+                let isAnswered = false;
+                if (ans !== undefined && ans !== null && ans !== '') {
+                    if (Array.isArray(ans)) isAnswered = ans.length > 0;
+                    else if (typeof ans === 'object') isAnswered = Object.keys(ans).length > 0;
+                    else isAnswered = true;
+                }
+
+                if (isAnswered) answeredCount++;
+
+                btn.className = 'q-nav-btn';
+                if (isCurrent) btn.classList.add('active');
+                if (isRagu) btn.classList.add('ragu');
+                else if (isAnswered) btn.classList.add('answered');
+
+                if (navFilterState === 'ANSWERED' && !isAnswered) btn.style.display = 'none';
+                else if (navFilterState === 'RAGU' && !isRagu) btn.style.display = 'none';
+                else if (navFilterState === 'UNANSWERED' && isAnswered) btn.style.display = 'none';
+                else btn.style.display = 'flex';
+            });
+
+            document.getElementById('answeredProgress').innerText = `${answeredCount}/${activeExamQuestions.length}`;
+        }
+
+        function filterNavGrid(type, btn) {
+            navFilterState = type;
+            const parent = btn.parentElement;
+            Array.from(parent.children).forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            updateNavGridButtons();
+        }
+
+        function confirmSubmitExam() {
+            Swal.fire({
+                title: 'Kumpulkan Jawaban Ujian?',
+                text: 'Pastikan seluruh soal telah Anda jawab dengan teliti!',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Ya, Kumpulkan Sekarang'
+            }).then(res => {
+                if (res.isConfirmed) submitExam(false);
+            });
+        }
+
+        function submitExam(forcedBySecurity = false) {
+            clearInterval(timerInterval);
+            isExamActive = false;
+
+            let autoScore = 0;
+            let totalWeight = 0;
+
+            activeExamQuestions.forEach(q => {
+                const w = q.weight || 1;
+                totalWeight += w;
+                const ans = userAnswers[q.id];
+
+                if (q.type === 'PG' && ans === q.kunci) {
+                    autoScore += w;
+                } else if (q.type === 'PG_KOMPLEKS' && Array.isArray(ans) && Array.isArray(q.kunci)) {
+                    if (ans.sort().join(',') === q.kunci.sort().join(',')) autoScore += w;
+                } else if (q.type === 'BENAR_SALAH' && typeof ans === 'object') {
+                    let correctCount = 0;
+                    (q.statements || []).forEach(st => {
+                        if (ans[st.id] === st.kunci) correctCount++;
+                    });
+                    if (correctCount === q.statements.length) autoScore += w;
+                }
+            });
+
+            const finalAutoScore = Math.round((autoScore / (totalWeight || 1)) * 100);
+
+            const resultEntry = {
+                nis: currentStudent.nis,
+                nama: currentStudent.nama,
+                kelas: currentStudent.kelas,
+                mapel: currentStudent.mapel,
+                skor_auto: finalAutoScore,
+                skor_essay: 0,
+                skor_final: finalAutoScore,
+                jumlah_pelanggaran: violationCount,
+                status_penyelesaian: forcedBySecurity ? 'Dihentikan Paksa' : 'Selesai Tepat Waktu',
+                jawaban: userAnswers
+            };
+
+            examResults.unshift(resultEntry);
+            localStorage.setItem('SIUS_V8_RESULTS', JSON.stringify(examResults));
+
+            const lockKey = `${currentStudent.nis}_${currentStudent.mapel}`;
+            activeSessionLocks[lockKey] = { 
+                nis: currentStudent.nis, 
+                nama: currentStudent.nama, 
+                mapel: currentStudent.mapel, 
+                startTime: 'Selesai Dikumpulkan (' + new Date().toLocaleTimeString('id-ID') + ')' 
+            };
+            localStorage.setItem('SIUS_V8_ACTIVE_SESSIONS', JSON.stringify(activeSessionLocks));
+
+            logStudentActivity('SUBMIT_EXAM', `Mengumpulkan ujian (${resultEntry.status_penyelesaian})`);
+
+            if (gasBackendUrl) {
+                fetch(gasBackendUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: "SUBMIT_EXAM", ...resultEntry })
+                });
+            }
+
+            document.getElementById('resNama').innerText = currentStudent.nama;
+            document.getElementById('resNIS').innerText = currentStudent.nis;
+            document.getElementById('resKelas').innerText = currentStudent.kelas;
+            document.getElementById('resMapel').innerText = currentStudent.mapel;
+            document.getElementById('resWaktuSubmit').innerText = new Date().toLocaleTimeString('id-ID');
+            document.getElementById('resStatus').innerText = resultEntry.status_penyelesaian;
+
+            document.getElementById('viewExam').classList.add('d-none');
+            document.getElementById('viewResult').classList.remove('d-none');
+        }
+
+        function toggleNavGridVisibility() {
+            const gridSection = document.getElementById('navGridCollapsibleSection');
+            const btn = document.getElementById('btnToggleGrid');
+            if (!gridSection || !btn) return;
+
+            if (gridSection.classList.contains('d-none')) {
+                gridSection.classList.remove('d-none');
+                btn.innerHTML = '<i class="fa-solid fa-eye-slash me-1"></i> Hide';
+            } else {
+                gridSection.classList.add('d-none');
+                btn.innerHTML = '<i class="fa-solid fa-eye me-1"></i> Show';
+            }
+        }
+
+        function logStudentActivity(category, details) {
+            if (!currentStudent) return;
+            const logEntry = {
+                timestamp: new Date().toLocaleString('id-ID'),
+                nis: currentStudent.nis,
+                nama: currentStudent.nama,
+                mapel: currentStudent.mapel,
+                category,
+                details
+            };
+            auditLogs.unshift(logEntry);
+            localStorage.setItem('SIUS_V8_AUDITLOGS', JSON.stringify(auditLogs));
+        }
+
+        function changeFontSize(delta) {
+            fontScale = Math.max(0.8, Math.min(1.4, fontScale + delta));
+            document.documentElement.style.setProperty('--font-scale', `${fontScale}rem`);
+        }
+
+        function toggleExamTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+        }
+
+        function openLightbox(src) {
+            document.getElementById('lightboxImage').src = src;
+            const modal = new bootstrap.Modal(document.getElementById('lightboxModal'));
+            modal.show();
+        }
+
+        function testGASConnection(showAlert = false) {
+            if (!gasBackendUrl) return;
+            const dot = document.getElementById('gasStatusDot');
+            const text = document.getElementById('gasStatusText');
+
+            fetch(gasBackendUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "PING" })
+            }).then(() => {
+                if (dot) dot.className = "gas-status-dot bg-success";
+                if (text) text.innerText = "GAS Webhook: Terhubung (Active)";
+            }).catch(() => {
+                if (dot) dot.className = "gas-status-dot bg-danger";
+                if (text) text.innerText = "GAS Webhook: Gagal Terhubung";
+            });
+        }
+
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentStudentAvatar = e.target.result;
+                document.getElementById('previewLoginAvatar').src = currentStudentAvatar;
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
