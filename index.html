@@ -522,21 +522,19 @@
     <script>
         /* --- ANTI INSPECT ELEMENT & DEVTOOLS DETECTOR FOR USER PORTAL --- */
         (function blockInspectElement() {
-            // 1. Blokir Klik Kanan
             document.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
                 showToastWarning('Klik kanan dinonaktifkan demi keamanan ujian!');
                 return false;
             });
 
-            // 2. Blokir Tombol Keyboard DevTools (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, dll)
             document.addEventListener('keydown', function(e) {
                 const isCtrlOrCmd = e.ctrlKey || e.metaKey;
                 const k = e.key.toLowerCase();
                 const keyCode = e.keyCode || e.which;
 
                 if (
-                    keyCode === 123 || // F12
+                    keyCode === 123 ||
                     (isCtrlOrCmd && e.shiftKey && (k === 'i' || k === 'j' || k === 'c' || k === 'k' || k === 'e')) ||
                     (isCtrlOrCmd && (k === 'u' || k === 's' || k === 'a' || k === 'c' || k === 'v' || k === 'p'))
                 ) {
@@ -552,7 +550,6 @@
                 }
             }, true);
 
-            // 3. DevTools Detection via Debugger Loop & Window Dimensions
             setInterval(function() {
                 const widthThreshold = window.outerWidth - window.innerWidth > 160;
                 const heightThreshold = window.outerHeight - window.innerHeight > 160;
@@ -565,7 +562,6 @@
                 }
             }, 1500);
 
-            // Clear Console Continuously
             setInterval(function() {
                 console.clear();
             }, 1000);
@@ -622,14 +618,81 @@
         let maxViolationsAllowed = 3;
         let isWarningOpen = false;
 
+        /* --- DOM CONTENT LOADED & SESSION RESTORATION (ANTI-REFRESH LOSS) --- */
         document.addEventListener('DOMContentLoaded', () => {
             initSecurityListeners();
             populateMapelSelects();
             updateScheduleStatusDisplay();
-
-            // Tarik bank soal terbaru secara live dari Google Sheets Cloud (GAS doGet)
             fetchQuestionsFromCloudOnStart();
+
+            if (gasBackendUrl) {
+                testGASConnection(false);
+            }
+
+            // Pulihkan sesi ujian jika siswa merefresh halaman (F5)
+            const savedStudent = localStorage.getItem('SIUS_V8_ACTIVE_STUDENT');
+            if (savedStudent) {
+                try {
+                    currentStudent = JSON.parse(savedStudent);
+                    userAnswers = JSON.parse(localStorage.getItem('SIUS_V8_USER_ANSWERS') || '{}');
+                    raguAnswers = JSON.parse(localStorage.getItem('SIUS_V8_RAGU_ANSWERS') || '{}');
+                    timeRemaining = parseInt(localStorage.getItem('SIUS_V8_TIME_REMAINING') || '3600', 10);
+                    currentQuestionIdx = parseInt(localStorage.getItem('SIUS_V8_CURRENT_IDX') || '0', 10);
+
+                    activeExamQuestions = questionsData.filter(q => q.mapel === currentStudent.mapel);
+                    if (activeExamQuestions.length === 0) {
+                        activeExamQuestions = JSON.parse(localStorage.getItem('SIUS_V8_QUESTIONS')) || [];
+                        activeExamQuestions = activeExamQuestions.filter(q => q.mapel === currentStudent.mapel);
+                    }
+
+                    if (activeExamQuestions.length > 0) {
+                        isExamActive = true;
+                        currentStudentAvatar = currentStudent.avatar || "https://placehold.co/100x100/2563eb/white?text=S";
+
+                        document.getElementById('navStudentName').innerText = currentStudent.nama;
+                        document.getElementById('navStudentNIS').innerText = `NIS: ${currentStudent.nis}`;
+                        document.getElementById('navStudentAvatar').src = currentStudentAvatar;
+                        document.getElementById('navUserInfo').classList.replace('d-none', 'd-flex');
+
+                        document.getElementById('bannerNama').innerText = currentStudent.nama;
+                        document.getElementById('bannerNIS').innerText = currentStudent.nis;
+                        document.getElementById('bannerKelas').innerText = currentStudent.kelas;
+                        document.getElementById('bannerMapel').innerText = currentStudent.mapel;
+                        document.getElementById('bannerAvatar').src = currentStudentAvatar;
+
+                        document.getElementById('viewLogin').classList.add('d-none');
+                        document.getElementById('viewExam').classList.remove('d-none');
+
+                        updateViolationBadge();
+                        renderQuestionGrid();
+                        loadQuestion(currentQuestionIdx);
+                        startTimer();
+                        
+                        showToastWarning('Sesi ujian dipulihkan. Jawaban Anda aman.');
+                    }
+                } catch (err) {
+                    console.error("Gagal memulihkan sesi:", err);
+                    clearExamState();
+                }
+            }
         });
+
+        function saveExamState() {
+            if (!currentStudent) return;
+            localStorage.setItem('SIUS_V8_ACTIVE_STUDENT', JSON.stringify(currentStudent));
+            localStorage.setItem('SIUS_V8_USER_ANSWERS', JSON.stringify(userAnswers));
+            localStorage.setItem('SIUS_V8_RAGU_ANSWERS', JSON.stringify(raguAnswers));
+            localStorage.setItem('SIUS_V8_TIME_REMAINING', timeRemaining);
+            localStorage.setItem('SIUS_V8_CURRENT_IDX', currentQuestionIdx);
+        }
+
+        function clearExamState() {
+            localStorage.removeItem('SIUS_V8_ACTIVE_STUDENT');
+            localStorage.removeItem('SIUS_V8_USER_ANSWERS');
+            localStorage.removeItem('SIUS_V8_RAGU_ANSWERS');
+            localStorage.removeItem('SIUS_V8_TIME_REMAINING');
+            localStorage.removeItem('SIUS_V8_CURRENT_IDX');
+        }
 
         function fetchQuestionsFromCloudOnStart() {
             if (!gasBackendUrl) return;
@@ -640,7 +703,6 @@
                     if (Array.isArray(data) && data.length > 0) {
                         questionsData = data;
                         localStorage.setItem('SIUS_V8_QUESTIONS', JSON.stringify(data));
-                        console.log("Bank soal berhasil disinkronkan secara live dari Google Sheets Cloud!");
                     }
                 })
                 .catch(err => {
@@ -713,16 +775,6 @@
             if (studentSelect) studentSelect.innerHTML = MASTER_MAPEL.map(m => `<option value="${m}">${m}</option>`).join('');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initSecurityListeners();
-            populateMapelSelects();
-            updateScheduleStatusDisplay();
-
-            if (gasBackendUrl) {
-                testGASConnection(false);
-            }
-        });
-
         function handleLogin(e) {
             e.preventDefault();
             const nis = document.getElementById('inputNIS').value.trim();
@@ -763,19 +815,13 @@
                 return;
             }
 
-            if (activeSessionLocks[lockKey]) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'AKSES DITOLAK: Sesi Sedang Aktif / Terkunci',
-                    html: `NIS <b>${nis}</b> sudah tercatat aktif login atau mengalami kendala. <br><br>Sesuai aturan ujian, <b>peserta hanya dapat 1 kali login</b>. Akses wajib di-reset oleh Admin Utama.`,
-                    confirmButtonText: 'Mengerti',
-                    confirmButtonColor: '#d33'
-                });
-                return;
+            // Jika siswa melakukan reset login/re-login pada sesi yang sama, perbolehkan dan muat kembali jawaban sebelumnya jika ada
+            activeExamQuestions = questionsData.filter(q => q.mapel === mapel);
+            if (activeExamQuestions.length === 0) {
+                activeExamQuestions = JSON.parse(localStorage.getItem('SIUS_V8_QUESTIONS')) || [];
+                activeExamQuestions = activeExamQuestions.filter(q => q.mapel === mapel);
             }
 
-            // Filter soal sesuai mapel yang dipilih siswa
-            activeExamQuestions = questionsData.filter(q => q.mapel === mapel);
             if (activeExamQuestions.length === 0) {
                 Swal.fire('Soal Kosong', `Belum ada soal yang dikonfigurasi untuk mapel ${mapel}! Pastikan soal sudah diinput di admin dan tersinkron.`, 'warning');
                 return;
@@ -800,14 +846,27 @@
             document.getElementById('viewLogin').classList.add('d-none');
             document.getElementById('viewExam').classList.remove('d-none');
 
-            userAnswers = {};
-            raguAnswers = {};
+            // Cek apakah sudah ada jawaban tersimpan sebelumnya untuk siswa ini
+            const existingAnswers = localStorage.getItem('SIUS_V8_USER_ANSWERS');
+            const existingRagu = localStorage.getItem('SIUS_V8_RAGU_ANSWERS');
+            const existingTime = localStorage.getItem('SIUS_V8_TIME_REMAINING');
+
+            if (!existingAnswers || currentStudent.mapel !== mapel) {
+                userAnswers = {};
+                raguAnswers = {};
+                timeRemaining = sched.durationMins * 60;
+            } else {
+                userAnswers = JSON.parse(existingAnswers);
+                raguAnswers = JSON.parse(existingRagu || '{}');
+                timeRemaining = existingTime ? parseInt(existingTime, 10) : sched.durationMins * 60;
+            }
+
             currentQuestionIdx = 0;
-            timeRemaining = sched.durationMins * 60;
             violationCount = 0;
             isExamActive = true;
 
-            logStudentActivity('LOGIN_EXAM', `Siswa login 1x eksklusif untuk mapel ${mapel}`);
+            saveExamState();
+            logStudentActivity('LOGIN_EXAM', `Siswa login untuk mapel ${mapel}`);
             updateViolationBadge();
             renderQuestionGrid();
             loadQuestion(0);
@@ -826,6 +885,7 @@
                 };
                 localStorage.setItem('SIUS_V8_ACTIVE_SESSIONS', JSON.stringify(activeSessionLocks));
             }
+            clearExamState();
             isExamActive = false;
             document.getElementById('navUserInfo').classList.replace('d-flex', 'd-none');
             document.getElementById('viewResult').classList.add('d-none');
@@ -890,6 +950,8 @@
 
             timerInterval = setInterval(() => {
                 timeRemaining--;
+                saveExamState();
+
                 if (timeRemaining <= 0) {
                     clearInterval(timerInterval);
                     Swal.fire('Waktu Habis!', 'Waktu pengerjaan ujian telah selesai. Jawaban dikumpulkan otomatis.', 'warning')
@@ -930,6 +992,7 @@
 
             renderQuestionOptions(q);
             updateNavGridButtons();
+            saveExamState();
 
             document.getElementById('btnPrev').disabled = idx === 0;
             if (idx === activeExamQuestions.length - 1) {
@@ -1028,7 +1091,7 @@
                                     <tr>
                                         <td><b>${pair.premis}</b></td>
                                         <td>
-                                            <input type="text" class="form-control form-control-sm" value="${ansObj[pair.id] || ''}" placeholder="Ketikkan pasangan..." onchange="updateMatchingAns('${pair.id}', this.value)">
+                                            <input type="text" class="form-control form-control-sm" value="${ansObj[pair.id] || ''}" placeholder="Ketikkan pasangan..." oninput="updateMatchingAns('${pair.id}', this.value)">
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -1049,6 +1112,7 @@
         function selectSingleOption(opt) {
             const q = activeExamQuestions[currentQuestionIdx];
             userAnswers[q.id] = opt;
+            saveExamState();
             loadQuestion(currentQuestionIdx);
         }
 
@@ -1058,6 +1122,7 @@
             if (list.includes(opt)) list = list.filter(item => item !== opt);
             else list.push(opt);
             userAnswers[q.id] = list;
+            saveExamState();
             loadQuestion(currentQuestionIdx);
         }
 
@@ -1065,6 +1130,7 @@
             const q = activeExamQuestions[currentQuestionIdx];
             userAnswers[q.id] = userAnswers[q.id] || {};
             userAnswers[q.id][stId] = val;
+            saveExamState();
             updateNavGridButtons();
         }
 
@@ -1072,18 +1138,21 @@
             const q = activeExamQuestions[currentQuestionIdx];
             userAnswers[q.id] = userAnswers[q.id] || {};
             userAnswers[q.id][pairId] = val;
+            saveExamState();
             updateNavGridButtons();
         }
 
         function updateEssayAns(val) {
             const q = activeExamQuestions[currentQuestionIdx];
             userAnswers[q.id] = val;
+            saveExamState();
             updateNavGridButtons();
         }
 
         function toggleRagu() {
             const q = activeExamQuestions[currentQuestionIdx];
             raguAnswers[q.id] = document.getElementById('checkRagu').checked;
+            saveExamState();
             updateNavGridButtons();
         }
 
@@ -1208,6 +1277,7 @@
             localStorage.setItem('SIUS_V8_ACTIVE_SESSIONS', JSON.stringify(activeSessionLocks));
 
             logStudentActivity('SUBMIT_EXAM', `Mengumpulkan ujian (${resultEntry.status_penyelesaian})`);
+            clearExamState();
 
             if (gasBackendUrl) {
                 fetch(gasBackendUrl, {
